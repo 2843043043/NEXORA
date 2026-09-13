@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crop Doctor AI — Voice Crop Doctor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --leaf-900:#0F3D2E; --leaf-700:#1B5E3A; --leaf-500:#2E8B57; --leaf-300:#8FD4A8; --leaf-100:#E7F5EC;
+    --soil-500:#B5652B; --gold-500:#E0A03D; --gold-100:#FBEBD1; --paper:#F4F2EC;
+    --ink:#1D2B22; --ink-soft:#5A6B60; --white:#FFFFFF; --danger:#C1443C;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Poppins',sans-serif;
+    background:
+      radial-gradient(circle at 15% 0%, rgba(46,139,87,0.14), transparent 45%),
+      radial-gradient(circle at 85% 100%, rgba(224,160,61,0.12), transparent 45%),
+      var(--paper);
+    min-height:100vh; color:var(--ink);
+    display:block;
+    padding:0 0 88px;
+  }
+  /* App is always presented mobile-app style — a single narrow column centered on the
+     page, no matter how wide the browser window is (desktop ya mobile, dono par same look). */
+  .stage{ width:100%; max-width:430px; margin:0 auto; display:flex; flex-direction:column; gap:20px; }
+  .side{ order:2; }
+  .phone-wrap{ order:1; }
+
+  .brand-row{ display:flex; align-items:center; gap:12px; margin-bottom:18px; }
+  .brand-mark{ width:46px;height:46px;border-radius:13px; background:linear-gradient(155deg,var(--leaf-500),var(--leaf-900));
+    display:flex;align-items:center;justify-content:center; box-shadow:0 6px 16px rgba(15,61,46,0.28); flex-shrink:0; }
+  .brand-mark svg{width:26px;height:26px;}
+  .brand-name{font-family:'Noto Sans Devanagari',sans-serif;font-weight:700;font-size:21px;color:var(--leaf-900);line-height:1.15;}
+  .brand-tag{font-size:12px;color:var(--ink-soft);}
+
+  .headline{ font-family:'Noto Sans Devanagari',sans-serif; font-size:27px; font-weight:700; line-height:1.32; color:var(--leaf-900); margin:0 0 14px; }
+  .sub{ font-size:14px; color:var(--ink-soft); line-height:1.6; margin:0 0 20px; max-width:46ch; }
+
+  .status-row{ display:flex; gap:10px; align-items:center; margin-bottom:18px; font-size:12.5px; }
+  .status-dot{ width:9px; height:9px; border-radius:50%; background:#C9C2AE; }
+  .status-dot.ok{ background:#3EA85A; }
+  .status-dot.bad{ background:var(--danger); }
+
+  .ledger-card{ background:var(--white); border:1px solid rgba(15,61,46,0.09); border-radius:14px; padding:16px 18px; box-shadow:0 8px 20px rgba(15,61,46,0.05); margin-bottom:16px; }
+  .ledger-card h3{ margin:0 0 8px; font-size:13px; color:var(--leaf-900); }
+  .ledger-row{ display:flex; justify-content:space-between; font-size:12.5px; color:var(--ink-soft); padding:3px 0; }
+  .ledger-row b{ color:var(--ink); }
+  .chainbar{ display:flex; gap:3px; margin-top:8px; flex-wrap:wrap; }
+  .chainbar span{ width:10px; height:10px; border-radius:2px; background:var(--leaf-300); }
+
+  .web3-note{ background:linear-gradient(135deg, var(--gold-100), #fff); border:1px solid rgba(224,160,61,0.4); border-radius:14px; padding:14px 16px; font-size:12.5px; color:#7A4E14; line-height:1.55; }
+  .web3-note b{color:#5C3A0E;}
+
+  .phone-wrap{ display:flex; justify-content:center; }
+  .phone{ width:100%; max-width:380px; background:#0b141a; border-radius:34px; padding:12px; box-shadow:0 25px 60px rgba(15,61,46,0.28), 0 4px 12px rgba(0,0,0,0.15); }
+  .screen{ background:#EDE6DA; border-radius:24px; overflow:hidden; display:flex; flex-direction:column; height:660px; position:relative; }
+  .wa-header{ background:var(--leaf-900); color:#fff; padding:14px 16px; display:flex; flex-wrap:wrap; align-items:center; gap:8px 11px; flex-shrink:0; }
+  .wa-avatar{ width:38px;height:38px;border-radius:50%; background:linear-gradient(155deg,var(--leaf-300),var(--leaf-500)); display:flex;align-items:center;justify-content:center; font-size:18px; }
+  .wa-title{font-weight:600;font-size:15px;font-family:'Noto Sans Devanagari',sans-serif;}
+  .wa-status{font-size:11.5px;color:#B9E3C6;display:flex;align-items:center;gap:5px;}
+  .wa-status .dot{width:6px;height:6px;border-radius:50%;background:#4ADE80;}
+
+  .chat-area{ flex:1; overflow-y:auto; padding:16px 12px 8px; display:flex; flex-direction:column; gap:4px;
+    background-image: radial-gradient(rgba(27,94,58,0.045) 1px, transparent 1px); background-size: 16px 16px; }
+  .bubble-row{display:flex; width:100%;}
+  .bubble-row.user{justify-content:flex-end;} .bubble-row.bot{justify-content:flex-start;}
+  .bubble{ max-width:78%; padding:9px 12px; border-radius:12px; font-family:'Noto Sans Devanagari',sans-serif; font-size:13.8px; line-height:1.55; margin:4px 0; box-shadow:0 1px 1px rgba(0,0,0,0.06); white-space:pre-wrap; }
+  .bubble.user{background:#DCF8C6; border-top-right-radius:3px; color:#1a2e20;}
+  .bubble.bot{background:#fff; border-top-left-radius:3px; color:#22301f;}
+  .bubble img{max-width:100%; border-radius:8px; display:block; margin-bottom:6px;}
+  .bubble .time{display:block; text-align:right; font-size:10px; color:#8a9a8f; margin-top:4px;}
+
+  .voice-play{ display:inline-flex;align-items:center;gap:7px; margin-top:8px; background:var(--leaf-100); color:var(--leaf-900); border:none; padding:6px 12px; border-radius:20px; font-size:12px; font-weight:600; cursor:pointer; font-family:'Poppins',sans-serif; }
+  .voice-play:hover{background:var(--leaf-300);}
+  .token-badge{ display:inline-flex;align-items:center;gap:6px; margin-top:8px; background:var(--gold-100); color:#7A4E14; padding:5px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+  .shop-btn{ display:inline-flex;align-items:center;gap:7px; margin-top:8px; margin-left:6px; background:#E9F3FF; color:#1A5A9E; border:none; padding:6px 12px; border-radius:20px; font-size:12px; font-weight:600; cursor:pointer; font-family:'Poppins',sans-serif; }
+  .shop-btn:hover{ background:#D3E7FC; }
+  .followup-btn{ display:inline-flex;align-items:center;gap:7px; margin-top:8px; margin-left:6px; background:#F1E9FF; color:#5A2A9E; border:none; padding:6px 12px; border-radius:20px; font-size:12px; font-weight:600; cursor:pointer; font-family:'Poppins',sans-serif; }
+  .followup-btn:hover{ background:#E3D3FC; }
+  .weather-note{ font-size:11px; color:#3A6EA5; background:#EAF3FC; border-radius:8px; padding:6px 9px; margin-top:8px; font-family:'Noto Sans Devanagari',sans-serif; }
+  .verdict-badge{ display:inline-flex; align-items:center; gap:6px; font-weight:700; font-size:12.5px; padding:5px 11px; border-radius:16px; margin-bottom:6px; }
+  .verdict-badge.IMPROVING{ background:#E3F6E8; color:#1B7A3D; }
+  .verdict-badge.STABLE{ background:#FFF6DC; color:#8A6B00; }
+  .verdict-badge.WORSE{ background:#FDE7E5; color:#B22B22; }
+  .outbreak-alert{ margin:6px 0; background:#FDECEA; border:1px solid #F5B7B1; border-radius:12px; padding:10px 14px; font-size:12.5px; color:#8B2E24; font-family:'Noto Sans Devanagari',sans-serif; }
+  .outbreak-alert.MEDIUM{ background:#FFF6DC; border-color:#F0D060; color:#7A5C00; }
+  .expert-escalation{ margin:6px 0; background:#FFF6DC; border:1px solid #F0D060; border-radius:12px; padding:10px 14px; font-size:12.5px; color:#7A5C00; font-family:'Poppins',sans-serif; }
+  .expert-escalation .ee-title{ font-weight:700; margin-bottom:4px; }
+  .expert-escalation .ee-actions{ margin-top:8px; display:flex; gap:8px; flex-wrap:wrap; }
+  .expert-btn{ display:inline-flex; align-items:center; gap:6px; background:#7A5C00; color:#fff; border:none; padding:7px 13px; border-radius:20px; font-size:12px; font-weight:600; cursor:pointer; font-family:'Poppins',sans-serif; }
+  .expert-btn:hover{ background:#5E4700; }
+  .expert-btn.secondary{ background:#fff; color:#7A5C00; border:1px solid #E0C368; }
+  .expert-btn.secondary:hover{ background:#FCEFC2; }
+  .redeem-btn{ margin-top:10px; width:100%; background:var(--gold-500); color:#4A2E06; border:none; padding:9px 12px; border-radius:10px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:'Poppins',sans-serif; }
+  .redeem-btn:hover{ background:#CC8E32; }
+
+  /* ---- Modal ---- */
+  .modal-overlay{ position:fixed; inset:0; background:rgba(15,61,46,0.45); display:none; align-items:center; justify-content:center; z-index:50; padding:20px; }
+  .modal-overlay.open{ display:flex; }
+  .modal-box{ background:#fff; border-radius:16px; max-width:420px; width:100%; max-height:80vh; overflow-y:auto; padding:22px; box-shadow:0 20px 60px rgba(0,0,0,0.3); }
+  .modal-box h3{ margin:0 0 6px; font-size:16px; color:var(--leaf-900); font-family:'Noto Sans Devanagari',sans-serif; }
+  .modal-box p.desc{ font-size:12.5px; color:var(--ink-soft); margin:0 0 14px; }
+  .shop-item{ display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #eee; gap:10px; }
+  .shop-item:last-child{ border-bottom:none; }
+  .shop-item .shop-name{ font-size:13px; font-weight:600; color:var(--ink); font-family:'Noto Sans Devanagari',sans-serif; }
+  .shop-item .shop-dist{ font-size:11px; color:var(--ink-soft); }
+  .shop-item a{ font-size:11.5px; background:var(--leaf-700); color:#fff; padding:6px 10px; border-radius:16px; text-decoration:none; font-weight:600; white-space:nowrap; }
+  .fallback-link{ display:flex; align-items:center; justify-content:space-between; padding:11px 14px; margin-bottom:8px; border-radius:10px; background:var(--paper); text-decoration:none; color:var(--ink); font-weight:600; font-size:13px; }
+  .fallback-link:hover{ background:#EAE7DC; }
+  .fallback-link span.tag{ font-size:10.5px; color:var(--ink-soft); font-weight:500; }
+  .modal-close{ margin-top:14px; width:100%; background:#EEE; border:none; padding:9px; border-radius:10px; font-size:12.5px; font-weight:600; cursor:pointer; color:var(--ink); }
+  .modal-loading{ font-size:13px; color:var(--ink-soft); text-align:center; padding:20px 0; }
+  .toast{ position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--leaf-900); color:#fff; padding:12px 20px; border-radius:12px; font-size:13px; font-family:'Noto Sans Devanagari',sans-serif; opacity:0; transition:all .25s ease; z-index:60; box-shadow:0 10px 30px rgba(0,0,0,0.25); }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  .typing{ display:flex; gap:4px; padding:11px 14px; background:#fff; border-radius:12px; border-top-left-radius:3px; width:fit-content; margin:4px 0; }
+  .typing span{width:6px;height:6px;border-radius:50%;background:#9AA89E;animation:blink 1.2s infinite;}
+  .typing span:nth-child(2){animation-delay:.2s;} .typing span:nth-child(3){animation-delay:.4s;}
+  @keyframes blink{0%,60%,100%{opacity:.3;} 30%{opacity:1;}}
+
+  .composer{ flex-shrink:0; background:#EDE6DA; padding:9px 10px 12px; display:flex; align-items:flex-end; gap:8px; }
+  .img-preview{ display:flex; align-items:center; gap:8px; background:#fff; border-radius:12px; padding:6px 8px; margin:0 10px 8px; font-size:12px; color:var(--ink-soft); }
+  .img-preview img{width:36px;height:36px;object-fit:cover;border-radius:6px;}
+  .img-preview button{margin-left:auto; border:none; background:none; color:var(--danger); font-size:12px; cursor:pointer; font-weight:600;}
+
+  .input-pill{ flex:1; background:#fff; border-radius:22px; padding:9px 12px; display:flex; align-items:center; gap:8px; }
+  .input-pill input{ flex:1; border:none; outline:none; font-family:'Noto Sans Devanagari',sans-serif; font-size:13.5px; background:transparent; }
+  .icon-btn{ width:38px;height:38px;border-radius:50%; border:none; cursor:pointer; display:flex;align-items:center;justify-content:center; flex-shrink:0; background:#fff; color:var(--ink-soft); }
+  .icon-btn svg{width:18px;height:18px;}
+  .icon-btn.mic.recording{background:var(--danger); color:#fff; animation:pulse 1s infinite;}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(193,68,60,.5);} 70%{box-shadow:0 0 0 10px rgba(193,68,60,0);} 100%{box-shadow:0 0 0 0 rgba(193,68,60,0);}}
+  .icon-btn.send{background:var(--leaf-700); color:#fff;}
+  .icon-btn.send:disabled{opacity:.4; cursor:not-allowed;}
+  #fileInput{display:none;}
+  .hint-bar{ font-size:11px; color:var(--ink-soft); text-align:center; padding:6px 0 2px; flex-shrink:0; }
+
+  /* ---- Rural Mode: simplified 3-button UI ---- */
+  .rural-toggle{ margin-left:auto; background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.3); color:#fff; font-size:10.5px; font-weight:600; padding:5px 10px; border-radius:14px; cursor:pointer; font-family:'Poppins',sans-serif; white-space:nowrap; }
+  .rural-toggle.active{ background:var(--gold-500); border-color:var(--gold-500); color:#4A2E06; }
+  .rural-composer{ display:none; flex-shrink:0; background:#EDE6DA; padding:12px 10px 14px; gap:8px; }
+  .screen.rural-mode .composer{ display:none; }
+  .screen.rural-mode .rural-composer{ display:flex; }
+  .rural-btn{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; padding:16px 4px; border:none; border-radius:16px; font-size:12.5px; font-weight:700; font-family:'Noto Sans Devanagari',sans-serif; cursor:pointer; }
+  .rural-btn .icon{ font-size:28px; }
+  .rural-btn.rb-photo{ background:#E9F3FF; color:#1A5A9E; }
+  .rural-btn.rb-mic{ background:#FDEBEA; color:#B5342B; }
+  .rural-btn.rb-mic.recording{ background:var(--danger); color:#fff; animation:pulse 1s infinite; }
+  .rural-btn.rb-listen{ background:var(--leaf-100); color:var(--leaf-900); }
+
+  /* ---- AI Video Call ---- */
+  .video-call-btn{ display:inline-flex; align-items:center; gap:6px; background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.35); color:#fff; font-size:10.5px; font-weight:600; padding:5px 10px; border-radius:14px; cursor:pointer; font-family:'Poppins',sans-serif; white-space:nowrap; margin-left:6px; }
+  .call-overlay{ position:fixed; inset:0; background:radial-gradient(circle at 50% 30%, #16473A, #071711 75%); display:none; flex-direction:column; align-items:center; justify-content:space-between; z-index:100; padding:26px 18px; }
+  .call-overlay.open{ display:flex; }
+  .call-top{ width:100%; display:flex; justify-content:space-between; align-items:center; color:#D6E9DC; font-family:'Poppins',sans-serif; font-size:13px; }
+  .call-timer{ background:rgba(255,255,255,0.12); padding:5px 12px; border-radius:14px; font-variant-numeric:tabular-nums; }
+  .call-center{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; position:relative; width:100%; }
+  .avatar-ring{ width:180px; height:180px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:radial-gradient(circle, #2E8B57, #0F3D2E 70%); box-shadow:0 0 0 6px rgba(46,139,87,0.15); transition:box-shadow .2s ease, transform .2s ease; }
+  .avatar-ring .face{ font-size:76px; }
+  .avatar-ring.speaking{ box-shadow:0 0 0 6px rgba(224,160,61,0.35), 0 0 40px 10px rgba(224,160,61,0.25); animation:avatarPulse 0.9s ease-in-out infinite; }
+  .avatar-ring.listening{ box-shadow:0 0 0 6px rgba(46,139,87,0.45); animation:avatarBreathe 1.6s ease-in-out infinite; }
+  @keyframes avatarPulse{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.045); } }
+  @keyframes avatarBreathe{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.02); } }
+  .call-status-text{ color:#EAF3EA; font-family:'Noto Sans Devanagari',sans-serif; font-size:15px; text-align:center; max-width:320px; min-height:44px; }
+  .call-caption{ color:#9FC3AC; font-size:11.5px; font-family:'Noto Sans Devanagari',sans-serif; text-align:center; max-width:300px; }
+  .self-view{ position:absolute; bottom:0; right:0; width:88px; height:118px; border-radius:14px; overflow:hidden; background:#0b1a14; border:2px solid rgba(255,255,255,0.25); }
+  .self-view video{ width:100%; height:100%; object-fit:cover; transform:scaleX(-1); }
+  .self-view .no-cam{ width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:#6B8577; font-size:26px; }
+  .call-controls{ display:flex; gap:16px; align-items:center; }
+  .call-btn{ width:56px; height:56px; border-radius:50%; border:none; display:flex; align-items:center; justify-content:center; font-size:22px; cursor:pointer; background:rgba(255,255,255,0.14); color:#fff; }
+  .call-btn.active-off{ background:rgba(255,255,255,0.32); }
+  .call-btn.end{ background:var(--danger); width:64px; height:64px; font-size:24px; }
+  .call-btn.photo{ background:#E9F3FF; color:#1A5A9E; }
+
+  .app-page{display:none;width:100%;max-width:430px;margin:0 auto;padding:16px 14px 0;} .app-page.active{display:block;}
+  .top-nav{ width:100%; max-width:430px; display:flex; margin:0 auto; position:fixed; left:0; right:0; bottom:0; z-index:40;
+    background:#fff; box-shadow:0 -6px 20px rgba(15,61,46,0.12); padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+    gap:2px; justify-content:space-between; }
+  .nav-btn{
+    flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+    border:0; background:transparent; box-shadow:none; border-radius:10px; padding:7px 2px; font-size:10.5px; font-weight:600;
+    cursor:pointer; color:var(--ink-soft); white-space:normal; line-height:1.15;
+  }
+  .nav-btn.active{ background:var(--leaf-100); color:var(--leaf-900); }
+  .nav-btn .nav-icon{ font-size:20px; line-height:1; }
+  .nav-btn .nav-label{ font-size:10px; max-width:76px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .logout-btn{ flex:1; margin-left:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+    border:0; cursor:pointer; box-shadow:none; background:transparent; border-radius:10px; padding:7px 2px; font-size:10.5px; color:var(--ink-soft); }
+  .logout-btn:hover{ color:var(--danger); }
+  .logout-btn .nav-icon{ font-size:20px; line-height:1; }
+  .logout-btn .nav-label{max-width:76px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;}
+
+  .redirect-toast{ position:fixed; top:16px; left:50%; transform:translateX(-50%) translateY(-30px); background:var(--leaf-900); color:#fff; padding:10px 18px; border-radius:30px; font-size:12.5px; font-family:'Noto Sans Devanagari',sans-serif; box-shadow:0 10px 26px rgba(0,0,0,.25); z-index:70; opacity:0; transition:all .3s ease; }
+  .redirect-toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  .weather-page{max-width:430px;margin:auto}.weather-hero{background:linear-gradient(135deg,#0F3D2E,#2E8B57);color:#fff;border-radius:24px;padding:22px 20px;margin-bottom:16px}.weather-hero h1{margin:0 0 8px;font-size:19px;font-family:'Noto Sans Devanagari',sans-serif}.weather-alert{background:#fff1ef;color:#8d2922;border:2px solid #e6877f;border-radius:18px;padding:18px;margin:16px 0;font-family:'Noto Sans Devanagari',sans-serif}.weather-alert.high{background:#fde5e2}.weather-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}.day-card{background:#fff;border-radius:16px;padding:14px;box-shadow:0 6px 18px rgba(15,61,46,.08)}.day-card b{display:block;color:var(--leaf-900)}.rain{font-weight:700;color:#1A5A9E}.protect-card{background:#fff;border-radius:18px;padding:20px;border:1px solid #dbe9df}.weather-loading{padding:35px;text-align:center;color:var(--ink-soft)}
+
+  .hs-page{max-width:430px;margin:auto}
+  .hs-hero{background:linear-gradient(135deg,#0F3D2E,#2E8B57);color:#fff;border-radius:24px;padding:22px 20px;margin-bottom:16px}
+  .hs-hero h1{margin:0 0 8px;font-size:19px;font-family:'Noto Sans Devanagari',sans-serif}
+  .hs-hero p{margin:0;opacity:.92;font-size:13.5px;max-width:60ch}
+  .hs-loading{padding:35px;text-align:center;color:var(--ink-soft)}
+  .hs-empty{background:#fff;border-radius:18px;padding:40px 24px;text-align:center;color:var(--ink-soft);border:1px solid rgba(15,61,46,.08)}
+  .hs-empty .go-btn{margin-top:14px;display:inline-block;background:var(--leaf-700);color:#fff;text-decoration:none;padding:10px 20px;border-radius:20px;font-weight:700;font-size:12.5px;cursor:pointer;border:none}
+  .hs-top-row{display:flex;flex-direction:column;gap:16px;margin-bottom:16px}
+  .hs-score-card{background:#fff;border-radius:22px;padding:26px;box-shadow:0 8px 22px rgba(15,61,46,.07);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+  .hs-ring{width:150px;height:150px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:conic-gradient(var(--score-color,#2E8B57) calc(var(--score,70)*1%), #EAE6DC 0);margin-bottom:14px;position:relative}
+  .hs-ring::before{content:'';position:absolute;width:118px;height:118px;border-radius:50%;background:#fff}
+  .hs-ring-value{position:relative;font-size:30px;font-weight:800;color:var(--score-color,#2E8B57)}
+  .hs-ring-value small{display:block;font-size:11px;font-weight:600;color:var(--ink-soft);margin-top:2px}
+  .hs-score-label{font-family:'Noto Sans Devanagari',sans-serif;font-weight:700;font-size:15px;color:var(--ink)}
+  .hs-score-sub{font-size:11.5px;color:var(--ink-soft);margin-top:4px}
+  .hs-metrics-grid{display:flex;flex-direction:column;gap:12px}
+  .hs-metric-card{background:#fff;border-radius:18px;padding:16px 18px;box-shadow:0 6px 16px rgba(15,61,46,.06)}
+  .hs-metric-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .hs-metric-title{font-size:12.5px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:6px}
+  .hs-risk-pill{font-size:11px;font-weight:700;padding:3px 10px;border-radius:12px;color:#fff}
+  .hs-metric-bar{height:8px;border-radius:6px;background:#EAE6DC;overflow:hidden}
+  .hs-metric-fill{height:100%;border-radius:6px;transition:width .4s ease}
+  .hs-action-card{background:linear-gradient(135deg,var(--gold-100),#fff);border:1px solid rgba(224,160,61,.4);border-radius:18px;padding:18px 20px;margin-top:16px;font-family:'Noto Sans Devanagari',sans-serif;color:#7A4E14}
+  .hs-action-card b{color:#5C3A0E}
+  .hs-meta{font-size:11px;color:var(--ink-soft);text-align:right;margin-top:10px}
+
+  /* ---- Login (mobile + OTP) ---- */
+  #loginOverlay{ position:fixed; inset:0; z-index:100; display:flex; align-items:center; justify-content:center; padding:20px;
+    background:
+      radial-gradient(circle at 15% 10%, rgba(46,139,87,0.35), transparent 45%),
+      radial-gradient(circle at 85% 90%, rgba(224,160,61,0.28), transparent 45%),
+      var(--leaf-900); }
+  #loginOverlay.hidden{ display:none; }
+  .login-card{ background:#fff; border-radius:20px; width:100%; max-width:380px; padding:30px 26px; box-shadow:0 24px 70px rgba(0,0,0,0.35); text-align:center; }
+  .login-card .brand-mark{ width:52px; height:52px; border-radius:16px; background:var(--leaf-700); display:flex; align-items:center; justify-content:center; margin:0 auto 14px; }
+  .login-card h2{ margin:0 0 6px; font-size:19px; color:var(--leaf-900); font-family:'Poppins',sans-serif; }
+  .login-card p.login-sub{ margin:0 0 22px; font-size:12.5px; color:var(--ink-soft); font-family:'Noto Sans Devanagari',sans-serif; }
+  .mobile-input-row{ display:flex; align-items:center; gap:8px; border:1.5px solid #E1E7E2; border-radius:12px; padding:11px 14px; margin-bottom:12px; }
+  .mobile-input-row span{ font-weight:700; color:var(--ink-soft); font-size:14px; }
+  .mobile-input-row input{ border:none; outline:none; font-size:15px; width:100%; font-family:'Poppins',sans-serif; letter-spacing:0.5px; }
+  .otp-input-row{ display:flex; justify-content:center; gap:8px; margin-bottom:12px; }
+  .otp-input-row input{ width:44px; height:52px; text-align:center; font-size:20px; font-weight:700; border:1.5px solid #E1E7E2; border-radius:10px; outline:none; font-family:'Poppins',sans-serif; }
+  .otp-input-row input:focus{ border-color:var(--leaf-500); }
+  .login-btn{ width:100%; background:var(--leaf-700); color:#fff; border:none; padding:13px; border-radius:12px; font-size:14.5px; font-weight:700; cursor:pointer; font-family:'Poppins',sans-serif; }
+  .login-btn:hover{ background:var(--leaf-900); }
+  .login-btn:disabled{ opacity:0.55; cursor:not-allowed; }
+  .login-link-row{ margin-top:14px; font-size:12.5px; color:var(--ink-soft); }
+  .login-link-row a{ color:var(--leaf-700); font-weight:700; cursor:pointer; text-decoration:none; }
+  .login-error{ color:var(--danger); font-size:12px; margin:-4px 0 12px; min-height:14px; font-family:'Noto Sans Devanagari',sans-serif; }
+
+  /* ---- Language selection (shown once, right after login) ---- */
+  #languageOverlay{ position:fixed; inset:0; z-index:110; display:flex; align-items:center; justify-content:center; padding:20px; background:rgba(15,61,46,0.55); backdrop-filter:blur(3px); }
+  #languageOverlay.hidden{ display:none; }
+  .lang-card{ background:#fff; border-radius:20px; width:100%; max-width:380px; padding:28px 24px; box-shadow:0 24px 70px rgba(0,0,0,0.35); text-align:center; }
+  .lang-card h2{ margin:10px 0 4px; font-size:19px; color:var(--leaf-900); font-family:'Noto Sans Devanagari',sans-serif; }
+  .lang-card p{ margin:0 0 20px; font-size:12.5px; color:var(--ink-soft); }
+  .lang-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .lang-btn{ background:var(--paper); border:1.5px solid #E3DFD3; border-radius:12px; padding:16px 8px; cursor:pointer; font-family:'Noto Sans Devanagari',sans-serif; font-size:14px; font-weight:600; color:var(--ink); transition:all .15s ease; }
+  .lang-btn:hover, .lang-btn:active{ background:var(--leaf-100); border-color:var(--leaf-500); }
+  .lang-btn .native{ display:block; font-size:16px; margin-bottom:2px; }
+  .lang-btn .eng{ display:block; font-size:10.5px; color:var(--ink-soft); font-weight:500; }
+  .lang-note{ margin-top:16px; background:var(--gold-100); color:#7A4E14; font-size:11px; padding:8px 12px; border-radius:10px; }
+  .login-demo-otp{ background:var(--gold-100); color:#7A5C00; border-radius:10px; padding:8px 12px; font-size:12px; margin-bottom:14px; font-family:'Noto Sans Devanagari',sans-serif; }
+  .app-wrap.blurred{ filter:blur(6px); pointer-events:none; user-select:none; }
+</style>
+</head>
+<body>
+
+<!-- Mobile number + OTP login -->
+<div id="loginOverlay">
+  <div class="login-card">
+    <div class="brand-mark">
+      <svg viewBox="0 0 24 24" fill="none" width="26" height="26" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 21C7 21 4 17.5 4 13C4 8 8 3 12 3C16 3 20 8 20 13C20 17.5 17 21 12 21Z" stroke="white" stroke-width="1.6"/>
+        <path d="M12 21V11" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+        <path d="M12 15L8 12" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+        <path d="M12 12L16 9" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+    </div>
+
+    <div id="loginStepMobile">
+      <h2>Crop Doctor AI mein Login</h2>
+      <p class="login-sub">Apna mobile number dalein — hum aapko OTP bhejenge.</p>
+      <div class="mobile-input-row">
+        <span>🇮🇳 +91</span>
+        <input type="tel" id="loginMobileInput" placeholder="10 anko ka mobile number" maxlength="10" inputmode="numeric" autocomplete="tel">
+      </div>
+      <div class="login-error" id="loginMobileError"></div>
+      <button class="login-btn" id="sendOtpBtn">OTP Bhejein</button>
+    </div>
+
+    <div id="loginStepOtp" style="display:none;">
+      <h2>OTP Dalein</h2>
+      <p class="login-sub" id="otpSentToText">OTP bheja gaya hai +91 ______ par</p>
+      <div class="login-demo-otp" id="loginDemoOtpNote" style="display:none;"></div>
+      <div class="otp-input-row" id="otpInputRow">
+        <input type="tel" maxlength="1" inputmode="numeric">
+        <input type="tel" maxlength="1" inputmode="numeric">
+        <input type="tel" maxlength="1" inputmode="numeric">
+        <input type="tel" maxlength="1" inputmode="numeric">
+      </div>
+      <div class="login-error" id="loginOtpError"></div>
+      <button class="login-btn" id="verifyOtpBtn">Verify &amp; Login</button>
+      <div class="login-link-row">
+        <a id="resendOtpLink">OTP dobara bhejein</a> &nbsp;·&nbsp; <a id="changeMobileLink">Number badlein</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Language selection — shown once, right after login -->
+<div id="languageOverlay" class="hidden">
+  <div class="lang-card">
+    <div class="brand-mark" style="margin:0 auto 12px;">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 5h16M4 5c0 8 4 14 4 14M4 5c4 0 8 0 12 0M20 5c0 8-4 14-4 14M9 9h6" stroke="white" stroke-width="1.6" stroke-linecap="round"/></svg>
+    </div>
+    <h2>Apni Bhasha Chuniye</h2>
+    <p>Choose your language — AI is bhasha mein jawab dega</p>
+    <div class="lang-grid">
+      <button class="lang-btn" data-lang="hi" data-name="Hindi"><span class="native">हिंदी</span><span class="eng">Hindi</span></button>
+      <button class="lang-btn" data-lang="en" data-name="English"><span class="native">English</span><span class="eng">English</span></button>
+      <button class="lang-btn" data-lang="mr" data-name="Marathi"><span class="native">मराठी</span><span class="eng">Marathi</span></button>
+      <button class="lang-btn" data-lang="pa" data-name="Punjabi"><span class="native">ਪੰਜਾਬੀ</span><span class="eng">Punjabi</span></button>
+      <button class="lang-btn" data-lang="ta" data-name="Tamil"><span class="native">தமிழ்</span><span class="eng">Tamil</span></button>
+      <button class="lang-btn" data-lang="te" data-name="Telugu"><span class="native">తెలుగు</span><span class="eng">Telugu</span></button>
+      <button class="lang-btn" data-lang="bn" data-name="Bengali"><span class="native">বাংলা</span><span class="eng">Bengali</span></button>
+      <button class="lang-btn" data-lang="gu" data-name="Gujarati"><span class="native">ગુજરાતી</span><span class="eng">Gujarati</span></button>
+    </div>
+    <div class="lang-note">📋 Demo Mode ke sample jawab abhi sirf Hindi mein hain. Real AI (API key) lagne par aapki chuni hui bhasha mein poora jawab milega.</div>
+  </div>
+</div>
+
+<div id="appWrap" class="app-wrap blurred">
+<div class="top-nav" id="topNav">
+  <button class="nav-btn active" data-page="doctorPage"><span class="nav-icon">🌿</span><span class="nav-label">Crop Doctor</span></button>
+  <button class="nav-btn" data-page="healthScorePage"><span class="nav-icon">📊</span><span class="nav-label">Health Score</span></button>
+  <button class="nav-btn" data-page="weatherPage"><span class="nav-icon">🌦️</span><span class="nav-label">Weather &amp; Crop Alert</span></button>
+  <button class="logout-btn" id="logoutBtn"><span class="nav-icon">🔓</span><span class="nav-label" id="loggedInMobile"></span></button>
+  <button class="logout-btn" id="changeLangBtn"><span class="nav-icon">🌐</span><span class="nav-label" id="currentLangLabel">Bhasha</span></button>
+</div>
+<div id="weatherPage" class="app-page"><div class="weather-page"><section class="weather-hero"><h1>🌦️ Pehle Weather Alert, phir Crop Action</h1><p>Yeh page aapki fasal ka mausam lagatar (continuously) monitor karta hai aur har baar aage ke 7 din ka poora forecast dikhata hai — taaki baarish/dhoop se pehle hi bachav ki taiyari ho sake.</p><div id="weatherLocation">📍 Location detect ho rahi hai…</div><div id="weatherMonitorStatus" style="margin-top:8px;font-size:11.5px;opacity:.85;">🟢 Live monitoring chalu hai…</div></section><div id="weatherContent" class="weather-loading">Weather forecast load ho raha hai…</div></div></div>
+<div id="healthScorePage" class="app-page"><div class="hs-page">
+  <section class="hs-hero">
+    <h1>📊 AI Crop Health Report</h1>
+    <p>Aapki fasal ki sabse taazi photo/diagnosis se banaya gaya poora health breakdown — score, disease risk, pest risk aur pani ki kami, sab ek jagah.</p>
+  </section>
+  <div id="healthReportContent" class="hs-loading">Health report load ho raha hai…</div>
+</div></div>
+<div id="doctorPage" class="app-page active">
+<div class="stage">
+  <div class="side">
+    <div class="brand-row">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 21C7 21 4 17.5 4 13C4 8 8 3 12 3C16 3 20 8 20 13C20 17.5 17 21 12 21Z" stroke="white" stroke-width="1.6"/>
+          <path d="M12 21V11" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M12 15L8 12" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M12 12L16 9" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-name">Crop Doctor AI</div>
+        <div class="brand-tag">Voice-based Crop Doctor · WhatsApp/Call par</div>
+      </div>
+    </div>
+
+    <h1 class="headline">Apna backend live hai — ab yeh asli AI se baat kar raha hai.</h1>
+    <p class="sub">Yeh page seedha aapke local server (<code>/api/diagnose</code>) ko call karta hai, jo Claude Vision AI se photo/awaaz analyse karke jawab deta hai — aur har submission ko neeche diye "on-chain style" ledger mein log karta hai.</p>
+
+    <div class="status-row">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">Server check ho raha hai…</span>
+    </div>
+
+    <div class="ledger-card">
+      <h3>🌱 Crop Health Passport (on-chain)</h3>
+      <div class="ledger-row"><span>Passport entries</span><b id="chainLength">0</b></div>
+      <div class="ledger-row"><span>Aapke Agri Points</span><b id="myTokens">0</b></div>
+      <div class="ledger-row"><span>Record integrity</span><b id="chainValid">—</b></div>
+      <div class="chainbar" id="chainBar"></div>
+      <button class="redeem-btn" id="redeemBtn">🎁 Redeem Agri Points (Blinkit/Zepto cashback)</button>
+    </div>
+
+    <div class="web3-note" style="margin-bottom:16px;"><b>Yeh sirf points ka ledger nahi hai:</b> har diagnosis + follow-up mil kar farmer ki ek verifiable "Crop Health History" banate hain — Diagnosis → Treatment → Follow-up → Recovery, sab tamper-evident record mein. Yeh future mein crop-insurance claims, agri-loan/credit assessment aur subsidy verification ke kaam aa sakta hai.</div>
+
+    <div class="web3-note"><b>Kaise kaam karta hai:</b> har entry ek hash-chained block ban jaata hai (<code>backend/lib/ledger.js</code>) — bilkul blockchain jaisa tamper-evident structure. Production mein yehi call <code>contracts/CropDoctorToken.sol</code> ke <code>logDiagnosis()</code> ko jaati hai.</div>
+  </div>
+
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="screen">
+        <div class="wa-header">
+          <div class="wa-avatar">🌿</div>
+          <div>
+            <div class="wa-title">Crop Doctor AI</div>
+            <div class="wa-status"><span class="dot"></span> Online · Hindi/Local bhasha support</div>
+          </div>
+          <button class="rural-toggle" id="ruralToggle">🗣️ Simple Mode</button>
+          <button class="video-call-btn" id="videoCallBtn">📹 Video Call</button>
+        </div>
+
+        <div class="chat-area" id="chatArea">
+          <div class="bubble-row bot">
+            <div class="bubble bot">🙏 Namaste! Main aapka Crop Doctor hoon.<br>Patte ki photo bhejein ya bolke/type karke apni fasal ki dikkat bataiye — jaise "mere patte pe daag hai".</div>
+          </div>
+        </div>
+
+        <div class="hint-bar" id="hintBar">📷 Photo lagayein + bolke ya type karke symptom batayein</div>
+        <div id="previewSlot"></div>
+
+        <div class="composer">
+          <button class="icon-btn" id="attachBtn" title="Photo joden">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M21 12.5V17a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V7a4 4 0 0 1 4-4h9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M16 3l5 5-9.5 9.5H7v-4.5L16 3z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+          </button>
+          <input type="file" id="fileInput" accept="image/*">
+          <div class="input-pill">
+            <input type="text" id="textInput" placeholder="Type karein… (Hindi/English)">
+          </div>
+          <button class="icon-btn mic" id="micBtn" title="Bolke poochein">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3z" stroke="currentColor" stroke-width="1.7"/><path d="M19 11a7 7 0 0 1-14 0M12 18v3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          </button>
+          <button class="icon-btn send" id="sendBtn" title="Bhejein">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M3 20l18-8L3 4l0 6.5L15 12l-12 1.5L3 20z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+
+        <div class="rural-composer" id="ruralComposer">
+          <button class="rural-btn rb-photo" id="ruralPhotoBtn"><span class="icon">📸</span>Photo</button>
+          <button class="rural-btn rb-mic" id="ruralMicBtn"><span class="icon">🎤</span>Bolo</button>
+          <button class="rural-btn rb-listen" id="ruralListenBtn"><span class="icon">🔊</span>Suno</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- Nearby shop / fallback modal -->
+<div class="modal-overlay" id="shopModal">
+  <div class="modal-box" id="shopModalBox">
+    <div class="modal-loading">📍 Location dhundh rahe hain…</div>
+  </div>
+</div>
+
+<input type="file" id="followupFileInput" accept="image/*" style="display:none">
+<input type="file" id="callFileInput" accept="image/*" style="display:none">
+<div class="toast" id="toast"></div>
+<div class="redirect-toast" id="redirectToast"></div>
+
+<!-- AI Video Call overlay -->
+<div class="call-overlay" id="callOverlay">
+  <div class="call-top">
+    <span>🌿 Crop Doctor AI</span>
+    <span class="call-timer" id="callTimer">00:00</span>
+  </div>
+
+  <div class="call-center">
+    <div class="avatar-ring" id="avatarRing"><span class="face">🌾</span></div>
+    <div class="call-status-text" id="callStatusText">Call shuru ho raha hai…</div>
+    <div class="call-caption" id="callCaption"></div>
+    <div class="self-view" id="selfView">
+      <video id="selfViewVideo" autoplay muted playsinline style="display:none;"></video>
+      <div class="no-cam" id="selfViewFallback">🧑‍🌾</div>
+    </div>
+  </div>
+
+  <div class="call-controls">
+    <button class="call-btn photo" id="callPhotoBtn" title="Photo dikhayein">📸</button>
+    <button class="call-btn" id="callMicBtn" title="Mic on/off">🎤</button>
+    <button class="call-btn end" id="callEndBtn" title="Call khatam karein">📞</button>
+    <button class="call-btn" id="callCamBtn" title="Camera on/off">📷</button>
+  </div>
+</div>
+</div>
+
+<script>
+const chatArea = document.getElementById('chatArea');
+const textInput = document.getElementById('textInput');
+const sendBtn = document.getElementById('sendBtn');
+const micBtn = document.getElementById('micBtn');
+const attachBtn = document.getElementById('attachBtn');
+const fileInput = document.getElementById('fileInput');
+const previewSlot = document.getElementById('previewSlot');
+const hintBar = document.getElementById('hintBar');
+
+let pendingImageBase64 = null;
+let pendingImageMedia = null;
+
+// Farmer identity is tied to their OTP-verified mobile number (see login flow below),
+// so Agri Points / Crop Health Passport persist across devices, not just per-browser.
+let FARMER_ID = localStorage.getItem('cropdoctor_farmer_id') || null;
+let FARMER_MOBILE = localStorage.getItem('cropdoctor_mobile') || null;
+
+// ---------------- Login: mobile number + OTP ----------------
+const loginOverlay = document.getElementById('loginOverlay');
+const appWrap = document.getElementById('appWrap');
+const loginStepMobile = document.getElementById('loginStepMobile');
+const loginStepOtp = document.getElementById('loginStepOtp');
+const loginMobileInput = document.getElementById('loginMobileInput');
+const loginMobileError = document.getElementById('loginMobileError');
+const sendOtpBtn = document.getElementById('sendOtpBtn');
+const otpSentToText = document.getElementById('otpSentToText');
+const loginDemoOtpNote = document.getElementById('loginDemoOtpNote');
+const otpInputs = Array.from(document.querySelectorAll('#otpInputRow input'));
+const loginOtpError = document.getElementById('loginOtpError');
+const verifyOtpBtn = document.getElementById('verifyOtpBtn');
+const resendOtpLink = document.getElementById('resendOtpLink');
+const changeMobileLink = document.getElementById('changeMobileLink');
+const logoutBtn = document.getElementById('logoutBtn');
+const loggedInMobile = document.getElementById('loggedInMobile');
+
+let pendingLoginMobile = null;
+let resendCooldownTimer = null;
+
+// ---------------- Language selection ----------------
+const languageOverlay = document.getElementById('languageOverlay');
+function getLanguage(){ return localStorage.getItem('cropdoctor_lang') || 'hi'; }
+
+document.querySelectorAll('.lang-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    localStorage.setItem('cropdoctor_lang', btn.dataset.lang);
+    localStorage.setItem('cropdoctor_lang_name', btn.dataset.name);
+    const lbl = document.getElementById('currentLangLabel');
+    if(lbl) lbl.textContent = btn.dataset.name;
+    languageOverlay.classList.add('hidden');
+    revealApp();
+  });
+});
+
+document.getElementById('changeLangBtn')?.addEventListener('click', () => {
+  languageOverlay.classList.remove('hidden');
+});
+
+const savedLangName = localStorage.getItem('cropdoctor_lang_name');
+if(savedLangName){ const lbl = document.getElementById('currentLangLabel'); if(lbl) lbl.textContent = savedLangName; }
+
+/** Actually shows the main app (called once login AND language are both done). */
+function revealApp(){
+  loginOverlay.classList.add('hidden');
+  languageOverlay.classList.add('hidden');
+  appWrap.classList.remove('blurred');
+  if(FARMER_MOBILE) loggedInMobile.textContent = FARMER_MOBILE;
+}
+
+function showApp(){
+  loginOverlay.classList.add('hidden');
+  if(!localStorage.getItem('cropdoctor_lang')){
+    languageOverlay.classList.remove('hidden');
+    // App stays blurred/hidden behind the language screen until a language is picked.
+  } else {
+    revealApp();
+  }
+}
+
+function showLogin(){
+  loginOverlay.classList.remove('hidden');
+  appWrap.classList.add('blurred');
+  loginStepOtp.style.display = 'none';
+  loginStepMobile.style.display = 'block';
+  loginMobileInput.value = '';
+  loginMobileError.textContent = '';
+}
+
+if(FARMER_ID && FARMER_MOBILE) showApp(); else showLogin();
+
+loginMobileInput.addEventListener('input', () => {
+  loginMobileInput.value = loginMobileInput.value.replace(/\D/g, '').slice(0, 10);
+});
+
+async function requestOtp(){
+  const mobile = loginMobileInput.value.trim();
+  loginMobileError.textContent = '';
+  if(!/^[6-9]\d{9}$/.test(mobile)){
+    loginMobileError.textContent = 'Sahi 10 anko ka mobile number dalein.';
+    return;
+  }
+  sendOtpBtn.disabled = true; sendOtpBtn.textContent = 'Bhej rahe hain…';
+  try{
+    const resp = await fetch('/api/auth/send-otp', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ mobile }) });
+    const data = await resp.json();
+    if(!resp.ok || !data.success) throw new Error(data.error || 'OTP bhejne mein dikkat hui.');
+    pendingLoginMobile = mobile;
+    otpSentToText.textContent = data.sentReal
+      ? `✅ SMS bheja gaya hai +91 ${mobile} par — OTP check karein`
+      : `OTP bheja gaya hai +91 ${mobile} par`;
+    if(data.demoOtp){
+      loginDemoOtpNote.style.display = 'block';
+      loginDemoOtpNote.textContent = `🧪 Demo Mode (SMS gateway configure nahi hai) — aapka OTP hai: ${data.demoOtp}`;
+    } else {
+      loginDemoOtpNote.style.display = 'none';
+    }
+    loginStepMobile.style.display = 'none';
+    loginStepOtp.style.display = 'block';
+    loginOtpError.textContent = '';
+    otpInputs.forEach(i => i.value = '');
+    otpInputs[0].focus();
+    startResendCooldown();
+  } catch(e){
+    loginMobileError.textContent = e.message;
+  } finally {
+    sendOtpBtn.disabled = false; sendOtpBtn.textContent = 'OTP Bhejein';
+  }
+}
+sendOtpBtn.addEventListener('click', requestOtp);
+loginMobileInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') requestOtp(); });
+
+otpInputs.forEach((input, idx) => {
+  input.addEventListener('input', () => {
+    input.value = input.value.replace(/\D/g, '').slice(0, 1);
+    if(input.value && idx < otpInputs.length - 1) otpInputs[idx + 1].focus();
+  });
+  input.addEventListener('keydown', (e) => {
+    if(e.key === 'Backspace' && !input.value && idx > 0) otpInputs[idx - 1].focus();
+    if(e.key === 'Enter') verifyOtpNow();
+  });
+  input.addEventListener('paste', (e) => {
+    const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, otpInputs.length);
+    if(text.length){
+      e.preventDefault();
+      text.split('').forEach((ch, i) => { if(otpInputs[i]) otpInputs[i].value = ch; });
+      otpInputs[Math.min(text.length, otpInputs.length) - 1].focus();
+    }
+  });
+});
+
+async function verifyOtpNow(){
+  const otp = otpInputs.map(i => i.value).join('');
+  loginOtpError.textContent = '';
+  if(otp.length < otpInputs.length){
+    loginOtpError.textContent = 'Poora OTP dalein.';
+    return;
+  }
+  verifyOtpBtn.disabled = true; verifyOtpBtn.textContent = 'Check kar rahe hain…';
+  try{
+    const resp = await fetch('/api/auth/verify-otp', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ mobile: pendingLoginMobile, otp }) });
+    const data = await resp.json();
+    if(!resp.ok || !data.success) throw new Error(data.error || 'OTP verify nahi hua.');
+    FARMER_ID = data.farmerId;
+    FARMER_MOBILE = pendingLoginMobile;
+    localStorage.setItem('cropdoctor_farmer_id', FARMER_ID);
+    localStorage.setItem('cropdoctor_mobile', FARMER_MOBILE);
+    showApp();
+  } catch(e){
+    loginOtpError.textContent = e.message;
+  } finally {
+    verifyOtpBtn.disabled = false; verifyOtpBtn.textContent = 'Verify & Login';
+  }
+}
+verifyOtpBtn.addEventListener('click', verifyOtpNow);
+
+function startResendCooldown(){
+  let secs = 30;
+  resendOtpLink.style.pointerEvents = 'none';
+  resendOtpLink.style.opacity = '0.5';
+  resendOtpLink.textContent = `OTP dobara bhejein (${secs}s)`;
+  clearInterval(resendCooldownTimer);
+  resendCooldownTimer = setInterval(() => {
+    secs -= 1;
+    if(secs <= 0){
+      clearInterval(resendCooldownTimer);
+      resendOtpLink.style.pointerEvents = 'auto';
+      resendOtpLink.style.opacity = '1';
+      resendOtpLink.textContent = 'OTP dobara bhejein';
+    } else {
+      resendOtpLink.textContent = `OTP dobara bhejein (${secs}s)`;
+    }
+  }, 1000);
+}
+
+resendOtpLink.addEventListener('click', () => {
+  if(resendOtpLink.style.pointerEvents === 'none') return;
+  loginMobileInput.value = pendingLoginMobile;
+  requestOtp();
+});
+
+changeMobileLink.addEventListener('click', () => {
+  clearInterval(resendCooldownTimer);
+  loginStepOtp.style.display = 'none';
+  loginStepMobile.style.display = 'block';
+  loginOtpError.textContent = '';
+});
+
+logoutBtn.addEventListener('click', () => {
+  localStorage.removeItem('cropdoctor_farmer_id');
+  localStorage.removeItem('cropdoctor_mobile');
+  FARMER_ID = null; FARMER_MOBILE = null;
+  location.reload();
+});
+
+function scrollBottom(){ chatArea.scrollTop = chatArea.scrollHeight; }
+
+function addUserBubble(text, imgDataUrl){
+  const row = document.createElement('div'); row.className = 'bubble-row user';
+  const b = document.createElement('div'); b.className = 'bubble user';
+  if(imgDataUrl){ const img = document.createElement('img'); img.src = imgDataUrl; b.appendChild(img); }
+  if(text){ const t = document.createElement('div'); t.textContent = text; b.appendChild(t); }
+  const time = document.createElement('span'); time.className='time';
+  time.textContent = new Date().toLocaleTimeString('hi-IN',{hour:'2-digit',minute:'2-digit'});
+  b.appendChild(time); row.appendChild(b); chatArea.appendChild(row); scrollBottom();
+}
+
+function addTyping(){
+  const row = document.createElement('div'); row.className='bubble-row bot'; row.id='typingRow';
+  const t = document.createElement('div'); t.className='typing'; t.innerHTML = '<span></span><span></span><span></span>';
+  row.appendChild(t); chatArea.appendChild(row); scrollBottom();
+}
+function removeTyping(){ const r = document.getElementById('typingRow'); if(r) r.remove(); }
+
+function speakHindi(text){
+  if(!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const clean = text.replace(/[*_#🩺🌿💊✅⚠️🙏📷🎙️]/g,'');
+  const utter = new SpeechSynthesisUtterance(clean);
+  utter.lang = 'hi-IN'; utter.rate = 0.95;
+  const voices = window.speechSynthesis.getVoices();
+  const hiVoice = voices.find(v => v.lang === 'hi-IN') || voices.find(v => v.lang.startsWith('hi'));
+  if(hiVoice) utter.voice = hiVoice;
+  window.speechSynthesis.speak(utter);
+}
+
+let lastBotText = '';
+
+/** The AI/mock reply ends with a machine-readable data block (Health Score, Disease Risk, etc.)
+ *  meant for the Health Score dashboard — it should never be shown to the farmer as chat text. */
+function stripInternalReportBlock(text){
+  if(!text) return text;
+  return text.split(/\n{1,2}(?:🌡️\s*)?Health Score\s*:/i)[0].trim();
+}
+
+function addBotBubble(text, ledgerInfo, extra = {}){
+  const displayText = stripInternalReportBlock(text);
+  const row = document.createElement('div'); row.className = 'bubble-row bot';
+  const b = document.createElement('div'); b.className = 'bubble bot';
+  const t = document.createElement('div'); t.textContent = displayText; b.appendChild(t);
+
+  if(extra.weather && extra.weather.summary){
+    const w = document.createElement('div'); w.className = 'weather-note';
+    w.textContent = `🌦️ ${extra.weather.summary}`;
+    b.appendChild(w);
+  }
+
+  const actionsRow = document.createElement('div');
+
+  const playBtn = document.createElement('button'); playBtn.className = 'voice-play';
+  playBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M5 9v6h4l5 5V4L9 9H5z" fill="currentColor"/></svg> Voice reply sunein';
+  playBtn.onclick = () => speakHindi(displayText);
+  actionsRow.appendChild(playBtn);
+
+  const shopBtn = document.createElement('button'); shopBtn.className = 'shop-btn';
+  shopBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M12 21s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12z" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="9" r="2.3" stroke="currentColor" stroke-width="1.7"/></svg> Nearby dukaan dhundhein';
+  shopBtn.onclick = () => openNearbyShops();
+  actionsRow.appendChild(shopBtn);
+
+  if(extra.caseId){
+    const followBtn = document.createElement('button'); followBtn.className = 'followup-btn';
+    followBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M4 4h16v16H4V4z" stroke="currentColor" stroke-width="1.7"/><path d="M4 9h16M9 4v16" stroke="currentColor" stroke-width="1.7"/></svg> 7 din baad follow-up bhejein';
+    followBtn.onclick = () => startFollowup(extra.caseId);
+    actionsRow.appendChild(followBtn);
+  }
+
+  b.appendChild(actionsRow);
+
+  if(ledgerInfo){
+    const token = document.createElement('div'); token.className = 'token-badge';
+    token.textContent = `🌾 +${ledgerInfo.tokensAwarded} Agri Points · Passport entry #${ledgerInfo.chainLength} on-chain logged`;
+    b.appendChild(token);
+  }
+
+  const time = document.createElement('span'); time.className='time';
+  time.textContent = new Date().toLocaleTimeString('hi-IN',{hour:'2-digit',minute:'2-digit'});
+  b.appendChild(time);
+  row.appendChild(b); chatArea.appendChild(row); scrollBottom();
+  speakHindi(displayText);
+  lastBotText = displayText;
+
+  if(extra.outbreak && (extra.outbreak.risk === 'MEDIUM' || extra.outbreak.risk === 'HIGH')){
+    const alertRow = document.createElement('div'); alertRow.className = 'bubble-row bot';
+    const alertBox = document.createElement('div'); alertBox.className = `outbreak-alert ${extra.outbreak.risk}`;
+    alertBox.innerHTML = `🚨 <b>${extra.outbreak.risk === 'HIGH' ? 'High Alert' : 'Alert'}:</b> Aapke area mein pichle kuch dino mein <b>${extra.outbreak.count} log</b> isi jaisi bimari report kar chuke hain. Apni fasal ko roz check karein aur preventive spray par vichaar karein.`;
+    alertRow.appendChild(alertBox);
+    chatArea.appendChild(alertRow); scrollBottom();
+  }
+
+  if(extra.needsExpertEscalation && typeof extra.confidence === 'number'){
+    addExpertEscalationBubble(extra.confidence);
+  }
+}
+
+/** Shown whenever the AI itself isn't confident enough — offers a human expert instead. */
+function addExpertEscalationBubble(confidence){
+  const row = document.createElement('div'); row.className = 'bubble-row bot';
+  const box = document.createElement('div'); box.className = 'expert-escalation';
+  box.innerHTML = `
+    <div class="ee-title">⚠️ AI Confidence: ${confidence}%</div>
+    <div>Main is baare mein poori tarah confident nahi hoon. Kya aap ek krishi expert se judna chahenge?</div>
+    <div class="ee-actions">
+      <button class="expert-btn">👨‍🌾 Haan, expert se judiye</button>
+      <button class="expert-btn secondary">Nahi, theek hai</button>
+    </div>
+  `;
+  const [yesBtn, noBtn] = box.querySelectorAll('button');
+  yesBtn.onclick = () => { connectToHumanExpert(); yesBtn.disabled = true; noBtn.disabled = true; };
+  noBtn.onclick = () => { box.querySelector('.ee-actions').innerHTML = 'Theek hai, agar zaroorat pade to "Video Call" button se bhi expert se baat kar sakte hain.'; };
+  row.appendChild(box); chatArea.appendChild(row); scrollBottom();
+}
+
+/** Mock hand-off to a human agri-expert (Kisan Call Centre) + option to jump into the live AI Video Call as an immediate fallback. */
+function connectToHumanExpert(){
+  openModalWithContent(`<div class="modal-loading">👨‍🌾 Aapko ek krishi expert se jodha ja raha hai…</div>`);
+  setTimeout(() => {
+    openModalWithContent(`
+      <h3>👨‍🌾 Krishi Expert Se Judiye</h3>
+      <p class="desc">AI ka confidence kam hai is diagnosis mein — ek insaan expert se seedha baat karke confirm kar lein.</p>
+      <div style="font-size:13px;line-height:1.7;color:var(--ink);">
+        📞 <b>Kisan Call Centre (Govt of India):</b> <a href="tel:18001801551">1800-180-1551</a> (toll-free)<br>
+        🏢 Ya apne nazdiki <b>Krishi Vigyan Kendra (KVK)</b> mein photo dikhayein.
+      </div>
+      <button class="expert-btn" style="margin-top:14px;width:100%;justify-content:center;" onclick="closeShopModal(); openVideoCall();">📹 Abhi AI Video Call par baat karein</button>
+      <button class="modal-close" onclick="closeShopModal()">Band karein</button>
+    `);
+  }, 1400);
+}
+
+function addVerdictBubble(verdict, aiText){
+  const row = document.createElement('div'); row.className = 'bubble-row bot';
+  const b = document.createElement('div'); b.className = 'bubble bot';
+
+  const badge = document.createElement('div'); badge.className = `verdict-badge ${verdict}`;
+  const icons = { IMPROVING: '🟢 Improving', STABLE: '🟡 Stable', WORSE: '🔴 Getting worse' };
+  badge.textContent = icons[verdict] || verdict;
+  b.appendChild(badge);
+
+  const t = document.createElement('div'); t.textContent = aiText; b.appendChild(t);
+
+  const playBtn = document.createElement('button'); playBtn.className = 'voice-play';
+  playBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M5 9v6h4l5 5V4L9 9H5z" fill="currentColor"/></svg> Voice reply sunein';
+  playBtn.onclick = () => speakHindi(aiText);
+  b.appendChild(playBtn);
+
+  const time = document.createElement('span'); time.className='time';
+  time.textContent = new Date().toLocaleTimeString('hi-IN',{hour:'2-digit',minute:'2-digit'});
+  b.appendChild(time);
+  row.appendChild(b); chatArea.appendChild(row); scrollBottom();
+  speakHindi(aiText);
+  lastBotText = aiText;
+}
+
+function addErrorBubble(msg){
+  const row = document.createElement('div'); row.className='bubble-row bot';
+  const b = document.createElement('div'); b.className='bubble bot'; b.style.color = '#C1443C'; b.textContent = msg;
+  row.appendChild(b); chatArea.appendChild(row); scrollBottom();
+}
+
+attachBtn.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', (e) => {
+  const file = e.target.files[0]; if(!file) return;
+  pendingImageMedia = file.type;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    pendingImageBase64 = ev.target.result.split(',')[1];
+    previewSlot.innerHTML = '';
+    const wrap = document.createElement('div'); wrap.className = 'img-preview';
+    const img = document.createElement('img'); img.src = ev.target.result; wrap.appendChild(img);
+    const label = document.createElement('span'); label.textContent = 'Photo taiyaar — ab bhejein'; wrap.appendChild(label);
+    const rm = document.createElement('button'); rm.textContent = 'हटाएं';
+    rm.onclick = () => { pendingImageBase64=null; pendingImageMedia=null; previewSlot.innerHTML=''; };
+    wrap.appendChild(rm); previewSlot.appendChild(wrap);
+  };
+  reader.readAsDataURL(file);
+});
+
+let recognizing = false, recognition = null;
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+if(SpeechRecognition){
+  recognition = new SpeechRecognition();
+  recognition.lang = 'hi-IN'; recognition.interimResults = false; recognition.maxAlternatives = 1;
+  recognition.onresult = (e) => { textInput.value = e.results[0][0].transcript; };
+  recognition.onend = () => { recognizing = false; micBtn.classList.remove('recording'); };
+  recognition.onerror = () => { recognizing = false; micBtn.classList.remove('recording'); };
+} else {
+  micBtn.title = 'Is browser mein voice input supported nahi hai';
+}
+micBtn.addEventListener('click', () => {
+  if(!recognition){ hintBar.textContent = '🎙️ Voice input is browser mein available nahi — type karke poochein'; return; }
+  if(recognizing){ recognition.stop(); return; }
+  recognizing = true; micBtn.classList.add('recording');
+  hintBar.textContent = '🎙️ Sun raha hoon… apni bhasha mein boliye';
+  try{ recognition.start(); } catch(e){}
+});
+
+function getLocationQuietly(){
+  return new Promise((resolve) => {
+    if(!('geolocation' in navigator)) return resolve(null);
+    const timer = setTimeout(() => resolve(null), 4000);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => { clearTimeout(timer); resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }); },
+      () => { clearTimeout(timer); resolve(null); },
+      { timeout: 3500 }
+    );
+  });
+}
+
+async function handleSend(){
+  const text = textInput.value.trim();
+  if(!text && !pendingImageBase64) return;
+
+  addUserBubble(text, pendingImageBase64 ? `data:${pendingImageMedia};base64,${pendingImageBase64}` : null);
+
+  const imgToSend = pendingImageBase64, mediaToSend = pendingImageMedia;
+  textInput.value = ''; pendingImageBase64 = null; pendingImageMedia = null; previewSlot.innerHTML = '';
+  hintBar.textContent = '📷 Photo lagayein + bolke ya type karke symptom batayein';
+  sendBtn.disabled = true;
+  addTyping();
+
+  try{
+    const loc = await getLocationQuietly(); // best-effort — silently skipped if denied/unsupported
+
+    const resp = await fetch('/api/diagnose', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text, imageBase64: imgToSend, mediaType: mediaToSend, farmerId: FARMER_ID,
+        lat: loc?.lat, lng: loc?.lng, language: getLanguage(),
+      }),
+    });
+    const data = await resp.json();
+    removeTyping();
+    if(resp.ok){
+      addBotBubble(data.diagnosis, data.ledger, { caseId: data.caseId, weather: data.weather, outbreak: data.outbreak, confidence: data.confidence, needsExpertEscalation: data.needsExpertEscalation });
+      refreshLedger();
+      runPostDiagnosisRedirect();
+    } else {
+      addErrorBubble('⚠️ ' + (data.error || 'AI se jawab nahi mila.'));
+    }
+  } catch(err){
+    removeTyping();
+    addErrorBubble('⚠️ Server tak nahi pahunch paaye. Kya backend chal raha hai? (npm start)');
+  } finally {
+    sendBtn.disabled = false;
+  }
+}
+sendBtn.addEventListener('click', handleSend);
+textInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') handleSend(); });
+
+// ---------------- Follow-up: before/after monitoring ----------------
+const followupFileInput = document.getElementById('followupFileInput');
+let pendingFollowupCaseId = null;
+
+function startFollowup(caseId){
+  pendingFollowupCaseId = caseId;
+  hintBar.textContent = '📸 Follow-up ke liye usi paudhe ki nayi photo chunein…';
+  followupFileInput.click();
+}
+
+followupFileInput.addEventListener('change', (e) => {
+  const file = e.target.files[0]; if(!file || !pendingFollowupCaseId) return;
+  const reader = new FileReader();
+  reader.onload = async (ev) => {
+    const base64 = ev.target.result.split(',')[1];
+    const caseId = pendingFollowupCaseId;
+    pendingFollowupCaseId = null;
+    followupFileInput.value = '';
+
+    addUserBubble('📅 Follow-up photo', ev.target.result);
+    addTyping();
+    try{
+      const resp = await fetch('/api/followup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ caseId, imageBase64: base64, mediaType: file.type, farmerId: FARMER_ID, language: getLanguage() }),
+      });
+      const data = await resp.json();
+      removeTyping();
+      if(resp.ok){
+        addVerdictBubble(data.verdict, data.aiText);
+        if(data.needsExpertEscalation && typeof data.confidence === 'number'){
+          addExpertEscalationBubble(data.confidence);
+        }
+        refreshLedger();
+        runPostDiagnosisRedirect();
+      } else {
+        addErrorBubble('⚠️ ' + (data.error || 'Follow-up analyse nahi ho paaya.'));
+      }
+    } catch(err){
+      removeTyping();
+      addErrorBubble('⚠️ Server tak nahi pahunch paaye.');
+    }
+  };
+  reader.readAsDataURL(file);
+});
+
+async function refreshLedger(){
+  try{
+    const resp = await fetch('/api/ledger');
+    const data = await resp.json();
+    document.getElementById('chainLength').textContent = data.chainLength;
+    document.getElementById('myTokens').textContent = data.balances['farmer_' + (await sha256Hex(FARMER_ID)).slice(0,12)] || 0;
+    document.getElementById('chainValid').textContent = data.valid ? '✅ Valid' : '❌ Broken';
+    const bar = document.getElementById('chainBar');
+    bar.innerHTML = '';
+    for(let i=0;i<Math.min(data.chainLength,40);i++){ const sp = document.createElement('span'); bar.appendChild(sp); }
+  } catch(e){ /* server might not be reachable yet */ }
+}
+async function sha256Hex(str){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+async function checkServer(){
+  const dot = document.getElementById('statusDot'), txt = document.getElementById('statusText');
+  try{
+    const r = await fetch('/api/health');
+    const data = await r.json();
+    if(r.ok){
+      dot.className = 'status-dot ok';
+      txt.textContent = data.demoMode ? 'Backend connected — Demo Mode (sample AI jawab)' : 'Backend connected — AI live hai';
+      refreshLedger();
+    } else throw new Error();
+  } catch(e){ dot.className = 'status-dot bad'; txt.textContent = 'Backend nahi mila — pehle "npm start" chalayein'; }
+}
+checkServer();
+
+if('speechSynthesis' in window){ window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices(); }
+
+// ---------------- Nearby shop finder + fallback (Blinkit/Zepto/BigBasket) ----------------
+const shopModal = document.getElementById('shopModal');
+const shopModalBox = document.getElementById('shopModalBox');
+
+function openModalWithContent(html){
+  shopModalBox.innerHTML = html;
+  shopModal.classList.add('open');
+}
+function closeShopModal(){ shopModal.classList.remove('open'); }
+shopModal.addEventListener('click', (e) => { if(e.target === shopModal) closeShopModal(); });
+
+function renderShopResults(data){
+  if(data.shops && data.shops.length){
+    const items = data.shops.map(s => `
+      <div class="shop-item">
+        <div>
+          <div class="shop-name">${s.name}</div>
+          <div class="shop-dist">${s.distanceKm} km door</div>
+        </div>
+        <a href="${s.mapsUrl}" target="_blank" rel="noopener">Directions</a>
+      </div>
+    `).join('');
+    openModalWithContent(`
+      <h3>📍 Aapke paas ke Krishi/Beej Dukaan</h3>
+      <p class="desc">OpenStreetMap data se — free, live location.</p>
+      ${items}
+      <button class="modal-close" onclick="closeShopModal()">Band karein</button>
+    `);
+  } else {
+    const links = (data.fallbackLinks || []).map(l => `
+      <a class="fallback-link" href="${l.url}" target="_blank" rel="noopener">
+        ${l.name} <span class="tag">order online →</span>
+      </a>
+    `).join('');
+    openModalWithContent(`
+      <h3>😔 Paas mein koi dukaan nahi mili</h3>
+      <p class="desc">Koi baat nahi — yeh online options try karein, ghar tak dawa/beej pahunch jayenge:</p>
+      ${links}
+      <button class="modal-close" onclick="closeShopModal()">Band karein</button>
+    `);
+  }
+}
+
+function openNearbyShops(){
+  openModalWithContent(`<div class="modal-loading">📍 Aapki location le rahe hain… browser mein "Allow" dabayein</div>`);
+
+  if(!('geolocation' in navigator)){
+    openModalWithContent(`
+      <h3>Location supported nahi hai</h3>
+      <p class="desc">Yeh browser location share nahi kar sakta. Neeche online options try karein:</p>
+      ${(window.__lastFallbackLinks || [{name:'Blinkit',url:'https://blinkit.com/s/?q=pesticide'},{name:'Zepto',url:'https://www.zeptonow.com/search?query=pesticide'},{name:'BigBasket',url:'https://www.bigbasket.com/ps/?q=pesticide'}])
+        .map(l => `<a class="fallback-link" href="${l.url}" target="_blank" rel="noopener">${l.name} <span class="tag">order online →</span></a>`).join('')}
+      <button class="modal-close" onclick="closeShopModal()">Band karein</button>
+    `);
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    try{
+      const resp = await fetch('/api/nearby-shops', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      });
+      const data = await resp.json();
+      window.__lastFallbackLinks = data.fallbackLinks;
+      renderShopResults(data);
+    } catch(e){
+      openModalWithContent(`
+        <h3>⚠️ Kuch gadbad ho gayi</h3>
+        <p class="desc">Server se shop data nahi mil paaya. Internet check karein.</p>
+        <button class="modal-close" onclick="closeShopModal()">Band karein</button>
+      `);
+    }
+  }, (err) => {
+    openModalWithContent(`
+      <h3>📍 Location permission nahi mili</h3>
+      <p class="desc">Browser ko location access dena zaroori hai nearby dukaan dhundne ke liye. Ya seedha online order karein:</p>
+      <a class="fallback-link" href="https://blinkit.com/s/?q=pesticide" target="_blank" rel="noopener">Blinkit <span class="tag">order online →</span></a>
+      <a class="fallback-link" href="https://www.zeptonow.com/search?query=pesticide" target="_blank" rel="noopener">Zepto <span class="tag">order online →</span></a>
+      <a class="fallback-link" href="https://www.bigbasket.com/ps/?q=pesticide" target="_blank" rel="noopener">BigBasket <span class="tag">order online →</span></a>
+      <button class="modal-close" onclick="closeShopModal()">Band karein</button>
+    `);
+  }, { timeout: 10000 });
+}
+
+// ---------------- Redeem Agri Points (demo simulation) ----------------
+const toastEl = document.getElementById('toast');
+function showToast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  setTimeout(() => toastEl.classList.remove('show'), 3200);
+}
+document.getElementById('redeemBtn').addEventListener('click', () => {
+  const pts = document.getElementById('myTokens').textContent || '0';
+  showToast(`🎉 ${pts} Agri Points "redeem" ho gaye (demo) — production mein yeh Blinkit/Zepto cashback ban jaayega!`);
+});
+
+
+// ---------------- Weather-first Page ----------------
+const pageButtons=document.querySelectorAll('.nav-btn');
+pageButtons.forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.app-page').forEach(p=>p.classList.remove('active'));btn.classList.add('active');document.getElementById(btn.dataset.page).classList.add('active');}));
+
+/** Programmatically switch tabs (re-uses the same click handler above, so the
+ *  Health Score / Weather pages also auto-refresh their data as they normally would). */
+function goToPage(pageId){
+  const btn = document.querySelector(`.nav-btn[data-page="${pageId}"]`);
+  if(btn) btn.click();
+}
+
+const redirectToastEl = document.getElementById('redirectToast');
+let redirectToastTimer = null;
+function showRedirectToast(msg){
+  clearTimeout(redirectToastTimer);
+  redirectToastEl.textContent = msg;
+  redirectToastEl.classList.add('show');
+  redirectToastTimer = setTimeout(() => redirectToastEl.classList.remove('show'), 2600);
+}
+
+/** The guided flow the farmer sees after every diagnosis / follow-up:
+ *  1. AI ka jawab chat mein aata hai
+ *  2. Kuch second baad apne aap Health Score page khul jaata hai (latest score dikhane)
+ *  3. Uske thodi der baad Weather & Crop Alert page khul jaata hai (aage ka mausam dikhane, taaki treatment timing plan ho sake) */
+function runPostDiagnosisRedirect(){
+  setTimeout(() => {
+    showRedirectToast('📊 Aapka Health Score taiyar hai — dikha rahe hain…');
+    goToPage('healthScorePage');
+  }, 2200);
+  setTimeout(() => {
+    showRedirectToast('🌦️ Ab dekhte hain aage ka weather & crop alert…');
+    goToPage('weatherPage');
+  }, 2200 + 5500);
+}
+function cropAdvice(alert){ if(!alert) return 'Agle dino mein baarish ka risk kam hai. Normal crop monitoring jaari rakhein.'; return `⚠️ ${alert.date} ko baarish ki ${alert.probability}% sambhavna hai. Spray/fungicide ya harvesting ko rain window se pehle plan karein, kata hua anaj aur sensitive crop ko cover karein, aur field drainage check karein.`;}
+async function loadWeatherPage(){ const box=document.getElementById('weatherContent'), locText=document.getElementById('weatherLocation'); if(!navigator.geolocation){box.innerHTML='<div class="weather-alert">📍 Weather alert ke liye browser location allow karein.</div>';return;} navigator.geolocation.getCurrentPosition(async pos=>{try{locText.textContent='📍 Aapki location ke liye 7-day forecast';const r=await fetch(`/api/weather?lat=${pos.coords.latitude}&lng=${pos.coords.longitude}`);const d=await r.json();if(!r.ok) throw new Error();const a=d.primaryAlert;box.innerHTML=`<div class="weather-alert ${a?.severity==='HIGH'?'high':''}"><h2>${a?'🚨 Rain Alert — Pehle se taiyar ho jaiye':'✅ फिलहाल कोई high rain alert नहीं'}</h2><p>${cropAdvice(a)}</p></div><div class="protect-card"><h3>🌱 Crop Protection Plan</h3><p>${a?'1. Drainage saaf rakhein & waterlogging rokhein. 2. Spray ko baarish se pehle/baad suitable dry window mein karein. 3. Kati hui fasal ko cover karke rakhein.':'Mitti ki nami, pests aur disease symptoms ko monitor karein. Weather badalne par alert yahin update hoga.'}</p></div><h3>7 din ka forecast</h3><div class="weather-grid">${d.days.map(x=>`<div class="day-card"><b>${x.date}</b><span>🌡️ ${x.min??'-'}–${x.max??'-'}°C</span><br><span class="rain">🌧️ ${x.rainChance??0}%</span><br><small>${x.rainMm??0} mm rain</small></div>`).join('')}</div>`;}catch(e){box.innerHTML='<div class="weather-alert">⚠️ Weather forecast load nahi hua. Internet connection check karke refresh karein.</div>';}},()=>{locText.textContent='📍 Location permission required';box.innerHTML='<div class="weather-alert">Location allow karein taki aapke area ki rain warning aur crop protection alert dikh sake.</div>';},{enableHighAccuracy:false,timeout:10000});}
+loadWeatherPage();
+
+// ---------------- Continuous weather monitoring ----------------
+// Weather & Crop Alert page keeps re-checking the forecast on its own (not just when the
+// farmer taps the tab) and always shows the freshest 7-day report + rain alert.
+const WEATHER_MONITOR_INTERVAL_MS = 15 * 60 * 1000; // recheck every 15 minutes
+setInterval(() => {
+  const statusEl = document.getElementById('weatherMonitorStatus');
+  if(statusEl) statusEl.textContent = `🟢 Live monitoring chalu hai — last check: ${new Date().toLocaleTimeString('hi-IN',{hour:'2-digit',minute:'2-digit'})}`;
+  loadWeatherPage();
+}, WEATHER_MONITOR_INTERVAL_MS);
+
+// ---------------- AI Crop Health Score Page ----------------
+function riskColorClient(level){ return { Low:'#2E8B57', Medium:'#E0A03D', High:'#C1443C' }[level] || '#8FA83E'; }
+
+function renderHealthReport(d){
+  const box = document.getElementById('healthReportContent');
+  const score = d.healthScore ?? 0;
+  const info = d.scoreInfo || {};
+  const updated = d.updatedAt ? new Date(d.updatedAt).toLocaleString('hi-IN', { dateStyle:'medium', timeStyle:'short' }) : '';
+
+  const metricCard = (emoji, title, risk) => `
+    <div class="hs-metric-card">
+      <div class="hs-metric-top">
+        <span class="hs-metric-title">${emoji} ${title}</span>
+        <span class="hs-risk-pill" style="background:${riskColorClient(risk.level)}">${risk.level}</span>
+      </div>
+      <div class="hs-metric-bar"><div class="hs-metric-fill" style="width:${risk.pct ?? (risk.level==='High'?75:risk.level==='Medium'?45:15)}%;background:${riskColorClient(risk.level)}"></div></div>
+    </div>`;
+
+  box.innerHTML = `
+    <div class="hs-top-row">
+      <div class="hs-score-card" style="--score:${score};--score-color:${info.color || '#2E8B57'}">
+        <div class="hs-ring">
+          <div class="hs-ring-value">${score}<small>/100</small></div>
+        </div>
+        <div class="hs-score-label">${info.emoji || ''} ${info.label || ''}</div>
+        <div class="hs-score-sub">AI Crop Health Score</div>
+      </div>
+      <div class="hs-metrics-grid">
+        ${metricCard('🦠', 'Disease Risk', d.diseaseRisk || { level:'Low' })}
+        ${metricCard('🐛', 'Pest Risk', d.pestRisk || { level:'Low' })}
+        ${metricCard('💧', 'Water Stress', d.waterStress || { level:'Low' })}
+      </div>
+    </div>
+    <div class="hs-action-card">🎯 <b>Suggested Action:</b> ${d.suggestedAction || 'Fasal roz check karte rahein.'}</div>
+    ${d.diagnosisTitle ? `<div class="hs-meta">Aakhri diagnosis: ${d.diagnosisTitle.replace(/^🩺\s*/,'')} · ${updated}</div>` : ''}
+  `;
+}
+
+async function loadHealthScorePage(){
+  const box = document.getElementById('healthReportContent');
+  box.innerHTML = 'Health report load ho raha hai…';
+  box.className = 'hs-loading';
+  try{
+    const resp = await fetch(`/api/health-report/${FARMER_ID}`);
+    const data = await resp.json();
+    if(!resp.ok) throw new Error(data.error || 'Load nahi hua');
+    box.className = '';
+    if(!data.hasReport){
+      box.innerHTML = `<div class="hs-empty">📸 Abhi tak koi diagnosis nahi hui.<br>Pehle Crop Doctor ko ek photo bhejein, phir yahan poora Health Score report dikhega.<br><button class="go-btn" onclick="document.querySelector('[data-page=doctorPage]').click()">🌿 Crop Doctor par jaayein</button></div>`;
+      return;
+    }
+    renderHealthReport(data);
+  } catch(e){
+    box.className = 'hs-loading';
+    box.innerHTML = '⚠️ Health report load nahi ho paaya. Thodi der baad try karein.';
+  }
+}
+// Refresh the report whenever the Health Score tab is opened.
+document.querySelector('[data-page="healthScorePage"]').addEventListener('click', loadHealthScorePage);
+loadHealthScorePage();
+
+// ---------------- Rural Mode: simplified 3-button UI (Photo / Bolo / Suno) ----------------
+const screenEl = document.querySelector('.screen');
+const ruralToggle = document.getElementById('ruralToggle');
+const ruralPhotoBtn = document.getElementById('ruralPhotoBtn');
+const ruralMicBtn = document.getElementById('ruralMicBtn');
+const ruralListenBtn = document.getElementById('ruralListenBtn');
+
+ruralToggle.addEventListener('click', () => {
+  const isOn = screenEl.classList.toggle('rural-mode');
+  ruralToggle.classList.toggle('active', isOn);
+  ruralToggle.textContent = isOn ? '⌨️ Poori Screen' : '🗣️ Simple Mode';
+  hintBar.textContent = isOn
+    ? '📸 Photo lo ya 🎤 Bolo — seedha bhej diya jayega'
+    : '📷 Photo lagayein + bolke ya type karke symptom batayein';
+});
+
+// Rural "Photo" button — same file picker, but auto-sends the moment a photo is chosen.
+ruralPhotoBtn.addEventListener('click', () => fileInput.click());
+
+// Rural "Bolo" button — same speech recognition, but auto-sends once it hears something.
+ruralMicBtn.addEventListener('click', () => {
+  if(!recognition){ hintBar.textContent = '🎙️ Voice input is browser mein available nahi'; return; }
+  if(recognizing){ recognition.stop(); return; }
+  recognizing = true; ruralMicBtn.classList.add('recording');
+  hintBar.textContent = '🎙️ Sun raha hoon… boliye';
+  try{ recognition.start(); } catch(e){}
+});
+
+// Rural "Suno" button — replays the last AI reply.
+ruralListenBtn.addEventListener('click', () => {
+  if(lastBotText) speakHindi(lastBotText);
+  else speakHindi('Abhi tak koi jawab nahi aaya hai. Pehle photo bhejein ya bolke poochein.');
+});
+
+// Shared auto-send hook: when in Rural Mode, sending should need zero extra taps.
+fileInput.addEventListener('change', () => {
+  if(screenEl.classList.contains('rural-mode') && pendingImageBase64){
+    setTimeout(() => handleSend(), 300); // tiny delay so the preview paints first
+  }
+});
+recognition && recognition.addEventListener && recognition.addEventListener('result', () => {
+  if(screenEl.classList.contains('rural-mode')){
+    setTimeout(() => handleSend(), 200);
+  }
+});
+// Also mirror the recording animation onto the rural mic button.
+if(recognition){
+  recognition.onend = () => { recognizing = false; micBtn.classList.remove('recording'); ruralMicBtn.classList.remove('recording'); };
+}
+
+// ---------------- AI Video Call ----------------
+const callOverlay = document.getElementById('callOverlay');
+const avatarRing = document.getElementById('avatarRing');
+const callStatusText = document.getElementById('callStatusText');
+const callCaption = document.getElementById('callCaption');
+const callTimerEl = document.getElementById('callTimer');
+const callMicBtn = document.getElementById('callMicBtn');
+const callCamBtn = document.getElementById('callCamBtn');
+const callEndBtn = document.getElementById('callEndBtn');
+const callPhotoBtn = document.getElementById('callPhotoBtn');
+const callFileInput = document.getElementById('callFileInput');
+const selfViewVideo = document.getElementById('selfViewVideo');
+const selfViewFallback = document.getElementById('selfViewFallback');
+
+let callActive = false;
+let callHistory = []; // [{role:'user'|'ai', text}]
+let callSeconds = 0;
+let callTimerInterval = null;
+let callMicOn = true;
+let callCamOn = true;
+let callStream = null;
+let callRecognition = null;
+let pendingCallImage = null; // {base64, mediaType}
+
+function formatTimer(s){
+  const m = Math.floor(s/60).toString().padStart(2,'0');
+  const sec = (s%60).toString().padStart(2,'0');
+  return `${m}:${sec}`;
+}
+
+async function startCamera(){
+  try{
+    callStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    selfViewVideo.srcObject = callStream;
+    selfViewVideo.style.display = 'block';
+    selfViewFallback.style.display = 'none';
+  } catch(e){
+    selfViewVideo.style.display = 'none';
+    selfViewFallback.style.display = 'flex';
+  }
+}
+function stopCamera(){
+  if(callStream){ callStream.getTracks().forEach(t => t.stop()); callStream = null; }
+  selfViewVideo.style.display = 'none';
+  selfViewFallback.style.display = 'flex';
+}
+
+function speakInCall(text){
+  if(!('speechSynthesis' in window)){
+    // No TTS available — just move straight to listening again.
+    if(callActive && callMicOn) startCallListening();
+    return;
+  }
+  window.speechSynthesis.cancel();
+  const clean = text.replace(/[*_#🩺🌿💊✅⚠️🙏📷🎙️]/g,'');
+  const utter = new SpeechSynthesisUtterance(clean);
+  utter.lang = 'hi-IN'; utter.rate = 0.97;
+  const voices = window.speechSynthesis.getVoices();
+  const hiVoice = voices.find(v => v.lang === 'hi-IN') || voices.find(v => v.lang.startsWith('hi'));
+  if(hiVoice) utter.voice = hiVoice;
+  utter.onstart = () => { avatarRing.classList.remove('listening'); avatarRing.classList.add('speaking'); callStatusText.textContent = text; };
+  utter.onend = () => {
+    avatarRing.classList.remove('speaking');
+    if(callActive && callMicOn) startCallListening();
+  };
+  window.speechSynthesis.speak(utter);
+}
+
+function startCallListening(){
+  if(!callRecognition || !callActive || !callMicOn) return;
+  avatarRing.classList.add('listening');
+  callStatusText.textContent = 'Sun raha hoon… boliye';
+  callCaption.textContent = '';
+  try{ callRecognition.start(); } catch(e){ /* already started, ignore */ }
+}
+
+async function sendCallTurn(message){
+  avatarRing.classList.remove('listening');
+  callStatusText.textContent = 'Soch raha hoon…';
+  if(message) callCaption.textContent = `Aapne kaha: "${message}"`;
+
+  const isFirstTurn = callHistory.length === 0;
+  try{
+    const resp = await fetch('/api/video-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message, isFirstTurn,
+        imageBase64: pendingCallImage?.base64, mediaType: pendingCallImage?.mediaType,
+        history: callHistory, farmerId: FARMER_ID, language: getLanguage(),
+      }),
+    });
+    const data = await resp.json();
+    pendingCallImage = null;
+    if(resp.ok){
+      if(message) callHistory.push({ role: 'user', text: message });
+      callHistory.push({ role: 'ai', text: data.reply });
+      speakInCall(data.reply);
+    } else {
+      callStatusText.textContent = 'Kuch gadbad ho gayi, dobara boliye.';
+      if(callActive && callMicOn) startCallListening();
+    }
+  } catch(e){
+    callStatusText.textContent = 'Connection mein dikkat — dobara try karein.';
+    if(callActive && callMicOn) startCallListening();
+  }
+}
+
+function openVideoCall(){
+  callActive = true;
+  callHistory = [];
+  callSeconds = 0;
+  callTimerEl.textContent = '00:00';
+  callOverlay.classList.add('open');
+  callStatusText.textContent = 'Call shuru ho raha hai…';
+  callCaption.textContent = '';
+
+  callTimerInterval = setInterval(() => { callSeconds++; callTimerEl.textContent = formatTimer(callSeconds); }, 1000);
+
+  if(callCamOn) startCamera();
+
+  const CallSpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(CallSpeechRecognition){
+    callRecognition = new CallSpeechRecognition();
+    callRecognition.lang = 'hi-IN'; callRecognition.interimResults = false; callRecognition.maxAlternatives = 1;
+    callRecognition.onresult = (e) => { sendCallTurn(e.results[0][0].transcript); };
+    callRecognition.onerror = () => { if(callActive && callMicOn) setTimeout(startCallListening, 800); };
+    callRecognition.onend = () => { /* handled by onresult/onerror re-trigger */ };
+  } else {
+    callStatusText.textContent = 'Is browser mein voice call support nahi hai. Chrome try karein.';
+  }
+
+  // Kick off the conversation with a greeting (no user message yet).
+  sendCallTurn('');
+}
+
+function closeVideoCall(){
+  callActive = false;
+  clearInterval(callTimerInterval);
+  window.speechSynthesis && window.speechSynthesis.cancel();
+  if(callRecognition){ try{ callRecognition.stop(); } catch(e){} callRecognition = null; }
+  stopCamera();
+  callOverlay.classList.remove('open');
+  avatarRing.classList.remove('speaking','listening');
+}
+
+document.getElementById('videoCallBtn').addEventListener('click', openVideoCall);
+callEndBtn.addEventListener('click', closeVideoCall);
+
+callMicBtn.addEventListener('click', () => {
+  callMicOn = !callMicOn;
+  callMicBtn.classList.toggle('active-off', !callMicOn);
+  callMicBtn.textContent = callMicOn ? '🎤' : '🔇';
+  if(callMicOn) startCallListening();
+  else { avatarRing.classList.remove('listening'); if(callRecognition) try{ callRecognition.stop(); }catch(e){} callStatusText.textContent = 'Mic band hai — dobara on karein baat karne ke liye'; }
+});
+
+callCamBtn.addEventListener('click', () => {
+  callCamOn = !callCamOn;
+  callCamBtn.classList.toggle('active-off', !callCamOn);
+  callCamBtn.textContent = callCamOn ? '📷' : '📵';
+  if(callCamOn) startCamera(); else stopCamera();
+});
+
+callPhotoBtn.addEventListener('click', () => callFileInput.click());
+callFileInput.addEventListener('change', (e) => {
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    pendingCallImage = { base64: ev.target.result.split(',')[1], mediaType: file.type };
+    callFileInput.value = '';
+    if(callRecognition) try{ callRecognition.stop(); }catch(e){}
+    sendCallTurn('Yeh meri fasal ki photo hai, dekhiye.');
+  };
+  reader.readAsDataURL(file);
+});
+</script>
+</body>
+</html>
